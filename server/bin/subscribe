@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+
+const { Account } = require('../model');
+const { heco, pool } = require('../providers');
+
+const {
+  VAULTS_CONTRACT,
+  DEPOSIT_EVENT,
+  WITHDRAW_EVENT
+} = process.env;
+
+const DepositOrWithdrawABI = [{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"pid","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}];
+
+// Event filters
+const filters = {
+  address: [ VAULTS_CONTRACT ],
+  topics: [[ DEPOSIT_EVENT, WITHDRAW_EVENT ]]
+};
+
+// 处理新区块
+const handleNewBlock = async number => {
+  // TODO...
+};
+
+/**
+ * address                  - String: From which this event originated from.
+ * data                     - String: The data containing non-indexed log parameter.
+ * topics                   - Array: An array with max 4 32 Byte topics, topic 1-3 contains indexed parameters of the log.
+ * logIndex                 - Number: Integer of the event index position in the block.
+ * transactionIndex         - Number: Integer of the transaction’s index position, the event was created in.
+ * transactionHash 32 Bytes - String: Hash of the transaction this event was created in.
+ * blockHash 32 Bytes       - String: Hash of the block where this event was created in. null if still pending.
+ * blockNumber              - Number: The block number where this log was created in. null if still pending.
+ */
+const decodeLogs = async logs => {
+  for (const { address, data, topics: [ topic0, ...indexed ], transactionHash, blockNumber } of logs) {
+    // 汇总账户 Deposit & Withdraw
+    if (topic0 === DEPOSIT_EVENT) {
+      const { user, pid, amount } = heco.abi.decodeLog(DepositOrWithdrawABI, data, indexed);
+
+      await Account.upsert({
+        tx_hash:      transactionHash,
+        block_number: blockNumber,
+        pool_address: address,
+        pool_id:      pid,
+        topic0:       topic0,
+        event:        'Deposit',
+        member:       user,
+        amount:       amount
+      });
+    }
+
+    if (topic0 === WITHDRAW_EVENT) {
+      const { user, pid, amount } = heco.abi.decodeLog(DepositOrWithdrawABI, data, indexed);
+
+      await Account.upsert({
+        tx_hash:      transactionHash,
+        block_number: blockNumber,
+        pool_address: address,
+        pool_id:      pid,
+        topic0:       topic0,
+        event:        'Withdraw',
+        member:       user,
+        amount:       amount
+      });
+    }
+  }
+};
+
+// main
+heco.getBlockNumber().then(async latest => {
+  // 可能有错过处理的事件
+  heco
+    .getPastLogs({ fromBlock: latest - 5000, toBlock: latest, ...filters })
+    .then(logs => decodeLogs(logs))
+    .catch(err => console.error(err));
+
+  // hecoProvider
+  //   .subscribe('logs', { fromBlock: latest, ...filters })
+  //   .on('data', log => decodeLogs([ log ]))
+  //   .on('error', err => console.error(err));
+
+  // hecoProvider
+  //   .subscribe('newBlockHeaders')
+  //   .on('data', ({ number }) => handleNewBlock(number))
+  //   .on('error', err => console.error(err));
+});

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
-interface IMasterChefHeco {
+interface IFarmPool {
     function pending(uint256 pid, address user) external view returns (uint256);
 
     function deposit(uint256 pid, uint256 amount) external;

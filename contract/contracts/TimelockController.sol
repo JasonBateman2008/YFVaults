@@ -5,50 +5,9 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-/**
- * @dev YFVaults functions that do not require less than the min timelock
- */
-interface IYFVaults {
-    function add(
-        uint256 _allocPoint,
-        address _want,
-        bool _withUpdate,
-        address _strat
-    ) external;
+import "./interfaces/IYFPool.sol";
+import "./interfaces/IStrategy.sol";
 
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) external;
-}
-
-/**
- * @dev Strategy functions that do not require timelock or have a timelock less than the min timelock
- */
-interface IStrategy {
-    // Main want token compounding function
-    function earn() external;
-
-    function farm() external;
-
-    function pause() external;
-
-    function unpause() external;
-
-    function rebalance(uint256 _borrowRate, uint256 _borrowDepth) external;
-
-    function deleverageOnce() external;
-
-    // In case new vaults require functions without a timelock as well, hoping to avoid having multiple timelock contracts
-    function noTimeLockFunc1() external;
-
-    function noTimeLockFunc2() external;
-
-    function noTimeLockFunc3() external;
-}
-
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/TimelockController.sol";
 /**
  * @dev Contract module which acts as a timelocked controller. When set as the
  * owner of an `Ownable` smart contract, it enforces a timelock on all
@@ -99,7 +58,6 @@ contract TimelockController is AccessControl {
         bytes32 indexed id,
         uint256 indexed index,
         uint256 _pid,
-        uint256 _allocPoint,
         bool _withUpdate,
         bytes32 predecessor,
         uint256 delay
@@ -477,20 +435,27 @@ contract TimelockController is AccessControl {
      * @dev Reduced timelock functions
      */
     function scheduleSet(
-        address _poolAddress,
-        uint256 _pid,
-        uint256 _allocPoint,
+        IYFPool _pool,
         bool _withUpdate,
+        uint _pid,
+
+        uint _allocYPoint,
+        uint _allocUPoint,
+        bool _allocHarvest,
+        bool _allocBuyback,
         bytes32 predecessor,
         bytes32 salt
     ) public onlyRole(EXECUTOR_ROLE) {
         bytes32 id =
             keccak256(
                 abi.encode(
-                    _poolAddress,
-                    _pid,
-                    _allocPoint,
+                    address(_pool),
                     _withUpdate,
+                    _pid,
+                    _allocYPoint,
+                    _allocUPoint,
+                    _allocHarvest,
+                    _allocBuyback,
                     predecessor,
                     salt
                 )
@@ -506,7 +471,6 @@ contract TimelockController is AccessControl {
             id,
             0,
             _pid,
-            _allocPoint,
             _withUpdate,
             predecessor,
             minDelayReduced
@@ -514,27 +478,41 @@ contract TimelockController is AccessControl {
     }
 
     function executeSet(
-        address _poolAddress,
-        uint256 _pid,
-        uint256 _allocPoint,
+        IYFPool _pool,
         bool _withUpdate,
+        uint _pid,
+        uint _allocYPoint,
+        uint _allocUPoint,
+        bool _allocHarvest,
+        bool _allocBuyback,
+
         bytes32 predecessor,
         bytes32 salt
     ) public payable virtual onlyRole(EXECUTOR_ROLE) {
         bytes32 id =
             keccak256(
                 abi.encode(
-                    _poolAddress,
-                    _pid,
-                    _allocPoint,
+                    address(_pool),
                     _withUpdate,
+                    _pid,
+                    _allocYPoint,
+                    _allocUPoint,
+                    _allocHarvest,
+                    _allocBuyback,
                     predecessor,
                     salt
                 )
             );
 
         _beforeCall(predecessor);
-        IYFVaults(_poolAddress).set(_pid, _allocPoint, _withUpdate);
+        _pool.set(
+            _withUpdate,
+            _pid,
+            _allocYPoint,
+            _allocUPoint,
+            _allocHarvest,
+            _allocBuyback
+        );
         _afterCall(id);
     }
 
@@ -543,12 +521,14 @@ contract TimelockController is AccessControl {
      */
 
     function add(
-        address _poolAddress,
-        address _want,
+        IYFPool _pool,
         bool _withUpdate,
-        address _strat
+
+        address _want,
+        address _earned,
+        IStrategy _strat
     ) public onlyRole(EXECUTOR_ROLE) {
-        IYFVaults(_poolAddress).add(0, _want, _withUpdate, _strat); // allocPoint = 0. Schedule set (timelocked) to increase allocPoint.
+        _pool.add(_withUpdate, 0, 0, false, false, _want, _earned, _strat); // allocPoint = 0. Schedule set (timelocked) to increase allocPoint.
     }
 
     function earn(address _stratAddress) public onlyRole(EXECUTOR_ROLE) {
@@ -565,18 +545,6 @@ contract TimelockController is AccessControl {
 
     function unpause(address _stratAddress) public onlyRole(EXECUTOR_ROLE) {
         IStrategy(_stratAddress).unpause();
-    }
-
-    function rebalance(
-        address _stratAddress,
-        uint256 _borrowRate,
-        uint256 _borrowDepth
-    ) public onlyRole(EXECUTOR_ROLE) {
-        IStrategy(_stratAddress).rebalance(_borrowRate, _borrowDepth);
-    }
-
-    function deleverageOnce(address _stratAddress) public onlyRole(EXECUTOR_ROLE) {
-        IStrategy(_stratAddress).deleverageOnce();
     }
 
     function withdrawETH() public payable {

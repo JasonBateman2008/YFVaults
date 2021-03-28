@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
-interface IMdexRouter {
+interface IDexRouter {
     function factory() external pure returns (address);
 
     function WHT() external pure returns (address);

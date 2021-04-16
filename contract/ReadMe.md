@@ -52,7 +52,7 @@ npx ganache-cli --fork https://http-mainnet-node.huobichain.com@3463152 --chainI
 The formula implemented in `optimalDepositA()` is derived on the condition that the swapping fee rate is 0.003 which may not be the case when this contract is deployed. An alternative swapping fee other than 0.003 would render the algorithm erroneous. We would like to inquire about possible measures to ensure the calculation is sound?
 
 ```
-  答: 如果手续变动，则会通过部署新的StratX来替换算法, 旧StratX会被暂停,只允许提现
+  答: 如果手续费变动，则会通过部署新的StratX contract 来替换算法, 旧StratX contract会被暂停,只允许提现
 ```
 
 > SXB-07: Governor Capability

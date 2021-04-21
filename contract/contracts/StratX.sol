@@ -223,7 +223,7 @@ contract StratX is Ownable, ReentrancyGuard, Pausable, LpSpell {
         sharesTotal = sharesTotal.sub(sharesRemoved);
         wantLockedTotal = wantLockedTotal.sub(_wantAmt);
 
-        // Withdraw fee: 0.015%
+        // Withdraw fee: 0.02%
         IERC20(desire).safeTransfer(custodian, fee);
         if (isErc20Token) {
             IERC20(desire).safeTransfer(_userAddress, _wantAmt.sub(fee));

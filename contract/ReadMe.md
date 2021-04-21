@@ -52,6 +52,8 @@ npx ganache-cli --fork https://http-mainnet-node.huobichain.com@3463152 --chainI
 The formula implemented in `optimalDepositA()` is derived on the condition that the swapping fee rate is 0.003 which may not be the case when this contract is deployed. An alternative swapping fee other than 0.003 would render the algorithm erroneous. We would like to inquire about possible measures to ensure the calculation is sound?
 
 ```
+  A: If the swapping fee changes, the algorithm will be replaced by deploying a new Stratx Contract, and the old Stratx Contract will be suspended, only withdrawals are allowed.
+
   答: 如果手续费变动，则会通过部署新的StratX contract 来替换算法, 旧StratX contract会被暂停,只允许提现
 ```
 
@@ -60,5 +62,7 @@ The formula implemented in `optimalDepositA()` is derived on the condition that 
 The governor has the capability to transfer 'earned' or 'desire' tokens to any address through `inCaseTokenGetStuck()`. While this capability offers a solution to the potential predicament the function name suggests, it could also be abused to enrich a selected few. This presents an issue we are concerned about and on which possible precautions we would like to inquire about.
 
 ```
+  A: Because Stratx never holds any token capital, so inCaseTokenGetStuck is safe. It may be needed when there are computational precision rounding.
+
   答: 因为 StratX 从来不持有任何资金, 所以 inCaseTokensGetStuck 是安全的。当有计算精度舍入时可能会需要它。
 ```

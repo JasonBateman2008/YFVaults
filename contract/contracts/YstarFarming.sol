@@ -199,16 +199,25 @@ contract YstarFarming is ERC20, ERC20Detailed {
   
   address public governance;
   mapping (address => bool) public minters;
+  mapping (address => bool) public burners;
 
+  uint256 public maxSupply=21000*1e18;
   constructor () public ERC20Detailed("YstarFarming", "YF", 18) {
       governance = msg.sender;
   }
 
   function mint(address account, uint amount) public {
       require(minters[msg.sender], "!minter");
+      require(totalSupply().add(amount) <= maxSupply, "!insufficient supply");
       _mint(account, amount);
   }
   
+  function burn(uint amount) public {
+      require(burners[msg.sender], "!burners");
+      require(balanceOf(msg.sender) >= amount, "!insufficient balance");
+      _burn(msg.sender, amount);
+  }
+
   function setGovernance(address _governance) public {
       require(msg.sender == governance, "!governance");
       governance = _governance;
@@ -222,5 +231,15 @@ contract YstarFarming is ERC20, ERC20Detailed {
   function removeMinter(address _minter) public {
       require(msg.sender == governance, "!governance");
       minters[_minter] = false;
+  }
+
+  function addBurner(address _burner) public {
+      require(msg.sender == governance, "!governance");
+      burners[_burner] = true;
+  }
+
+  function removeBurner(address _burner) public {
+      require(msg.sender == governance, "!governance");
+      burners[_burner] = false;
   }
 }

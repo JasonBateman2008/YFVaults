@@ -91,9 +91,10 @@ contract YFPool is Ownable, ReentrancyGuard, IYFPool {
     address public immutable YFToken;
     address public constant USDT = 0xa71EdC38d189767582C38A3145b5873052c3e47a;
 
-    uint public constant startBlock = 4048888;
-    uint public constant YFTokenMaxSupply = 300e18;
-    uint public constant YFTokenPerBlock  = 350000000000000;  // YF tokens created per block
+    uint public constant startBlock = 4466666;
+    uint public constant YFTokenMaxSupply = 210e18;
+    uint public constant YFTokenPerBlock  = 243055555555555;  // YF tokens created per block
+    uint public totalMined = 0;
 
     address private constant _NO_ADDRESS = address(1);
     address public override EXECUTOR; // TEMPORARY: user currently under execution.
@@ -185,7 +186,7 @@ contract YFPool is Ownable, ReentrancyGuard, IYFPool {
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint _from, uint _to) public view returns (uint) {
-        if (IERC20(YFToken).totalSupply() >= YFTokenMaxSupply) {
+        if (totalMined >= YFTokenMaxSupply) {
             return 0;
         }
         return _to.sub(_from);
@@ -221,6 +222,11 @@ contract YFPool is Ownable, ReentrancyGuard, IYFPool {
                 totalYAllocPoint
             );
 
+        if (totalMined.add(reward) > YFTokenMaxSupply) {
+            reward = YFTokenMaxSupply.sub(totalMined);
+        }
+
+        totalMined = totalMined.add(reward);
         IYFToken(YFToken).mint(address(this), reward);
 
         pool.accYPerShare = pool.accYPerShare.add(

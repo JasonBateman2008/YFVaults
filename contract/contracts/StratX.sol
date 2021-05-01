@@ -238,7 +238,7 @@ contract StratX is Ownable, ReentrancyGuard, Pausable, LpSpell {
     // 1. Harvest farm tokens
     // 2. Converts farm tokens into want tokens
     // 3. Deposits want tokens
-    function earn() public whenNotPaused {
+    function earn() public whenNotPaused onlyGov {
         require(isAutoComp, "!isAutoComp");
 
         // Harvest farm tokens
@@ -343,7 +343,7 @@ contract StratX is Ownable, ReentrancyGuard, Pausable, LpSpell {
             IERC20(USDT).safeTransfer(address(pool), usd_3);
 
             // Transmit: Buyback
-            (path[0], path[1], path[2]) = (earned, WHT, YFToken);
+            (path[0], path[1], path[2]) = (earned, USDT, YFToken);
             router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 buyback_,
                 0,

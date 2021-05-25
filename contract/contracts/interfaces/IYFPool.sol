@@ -6,27 +6,16 @@ import "./IStrategy.sol";
 
 interface IYFPool {
     function add(
-        bool _withUpdate,
-
-        uint _allocYPoint,
-        uint _allocUPoint,
-        uint _allocBPoint,
-
         address _want,
         address _earned,
         IStrategy _strat
     ) external;
 
-    function set(
-        bool _withUpdate,
-        uint _pid,
+    function pending(uint pid, address user) external view returns (uint, uint);
 
-        uint _allocYPoint,
-        uint _allocUPoint,
-        uint _allocBPoint
-    ) external;
+    function totalRewards(uint pid, address user) external view returns (uint, uint);
 
-    function pending(uint pid, address user) external view returns (uint r1_, uint r2_, uint r3_);
+    function claim(uint pid) external;
 
     function deposit(uint pid, uint amount) external;
 
@@ -35,7 +24,6 @@ interface IYFPool {
     function emergencyWithdraw(uint pid) external;
 
     function transmit(address token_, uint _amount) external;
-    function distributeHarvest(uint fee_, uint buyback_, uint harvest_) external;
 
     /// @dev Return the current executor (the owner of the current position).
     function EXECUTOR() external view returns (address);

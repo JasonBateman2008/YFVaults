@@ -66,3 +66,29 @@ The governor has the capability to transfer 'earned' or 'desire' tokens to any a
 
   答: 因为 StratX 从来不持有任何资金, 所以 inCaseTokensGetStuck 是安全的。当有计算精度舍入时可能会需要它。
 ```
+
+## V2.0
+
+```
+费用分配，分farm-boo池，farm-mdx池，stake池三部分：
+1，farm-boo池，即boo-usdt和boo-ht池，这两个池子挖出来的都是boo，挖出来的boo分配如下：
+1%卖成USDT给平台手续费账户；
+3%以BOO的形式给平台手续费账户（即，平台手续费账户一共拿4%，1%USDT+3%BOO）；
+3%以BOO的形式给boardroom；
+93%投入BOO单币池，挖出的BOO全部给用户；
+Boo单币池的未领取收益全部再复投到BOO单币池;
+BOO收益需要用户主动claim，减少claim次数;
+即，这两个池子，存币用户拿走93%收益，全部是BOO没有YF，也没有任何收益分给share池。
+
+2，farm-mdx池，即目前V1版本的池子，这些池子挖出来的都是MDX，挖出的MDX分配如下:
+1%卖成USDT给平台手续费账户；
+3%卖成USDT给boardroom；
+3%没成USDT给share池用户；
+93%给用户（其中3%卖成YF，45%以MDX形式给用户，45%复投以LP形式给用户）；
+即，和目前保持一致，注意用户拿走自己所存部分收益的93%（YF部分是每个账户收益的3%换成YF给对应账户，不是在所有池子里平分）。
+
+3，stake池，单币池，这些池子挖出来的是BOO+Filda或CAN，挖出来的BOO、filda、can分配如下：
+filda和can全部卖成YF给用户；
+BOO中，1%卖成USDT给平台手续费账户，3%以BOO的形式给平台手续费账户，3%以BOO的形式给boardroom，剩余全部给用户；
+即，对于单币池，存币用户拿走约93%收益，收益为YF+BOO，没有任何收益分配给share池。和farm-boo池的区别在于这里多了一些filda和can，都换成了YF给用户。
+```

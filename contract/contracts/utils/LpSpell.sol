@@ -5,11 +5,11 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "./interfaces/IDexRouter.sol";
-import "./interfaces/IDexPair.sol";
-import "./interfaces/IWETH.sol";
-import "./interfaces/IYFPool.sol";
-import "./utils/HomoraMath.sol";
+import "../interfaces/IDexRouter.sol";
+import "../interfaces/IDexPair.sol";
+import "../interfaces/IWETH.sol";
+import "../interfaces/IYFPool.sol";
+import "./HomoraMath.sol";
 
 abstract contract LpSpell {
     using SafeMath for uint;
@@ -64,19 +64,17 @@ abstract contract LpSpell {
 
     /// @dev Internal call to refund tokens to the current bank executor.
     /// @param token The token to perform the refund action.
-    function doRefund(address token) internal {
-        uint balance = IERC20(token).balanceOf(address(this));
-        if (balance > 0) {
-            IERC20(token).safeTransfer(pool.EXECUTOR(), balance);
+    function doRefund(address token, uint amount) internal {
+        if (amount > 0) {
+            IERC20(token).safeTransfer(pool.EXECUTOR(), amount);
         }
     }
 
     /// @dev Internal call to refund all WETH to the current executor as native ETH.
-    function doRefundETH() internal {
-        uint balance = IWETH(WHT).balanceOf(address(this));
-        if (balance > 0) {
-            IWETH(WHT).withdraw(balance);
-            (bool success, ) = pool.EXECUTOR().call{value: balance}(new bytes(0));
+    function doRefundETH(uint amount) internal {
+        if (amount > 0) {
+            IWETH(WHT).withdraw(amount);
+            (bool success, ) = pool.EXECUTOR().call{value: amount}(new bytes(0));
             require(success, 'refund ETH failed');
         }
     }
@@ -145,6 +143,9 @@ abstract contract LpSpell {
         ensureApprove(tokenB, address(router));
         ensureApprove(lp, address(router));
 
+        uint _beforeToken0Bal = IERC20(tokenA).balanceOf(address(this));
+        uint _beforeToken1Bal = IERC20(tokenB).balanceOf(address(this));
+
         // 1. Get user input amounts
         doTransmitETH();
         doTransmit(tokenA, amt.amtAUser);
@@ -155,8 +156,8 @@ abstract contract LpSpell {
         uint swapAmt;
         bool isReversed;
         {
-            uint amtA = IERC20(tokenA).balanceOf(address(this));
-            uint amtB = IERC20(tokenB).balanceOf(address(this));
+            uint amtA = IERC20(tokenA).balanceOf(address(this)).sub(_beforeToken0Bal);
+            uint amtB = IERC20(tokenB).balanceOf(address(this)).sub(_beforeToken1Bal);
             uint resA;
             uint resB;
             if (IDexPair(lp).token0() == tokenA) {
@@ -175,8 +176,8 @@ abstract contract LpSpell {
         }
 
         // 4. Add liquidity
-        uint balA = IERC20(tokenA).balanceOf(address(this));
-        uint balB = IERC20(tokenB).balanceOf(address(this));
+        uint balA = IERC20(tokenA).balanceOf(address(this)).sub(_beforeToken0Bal);
+        uint balB = IERC20(tokenB).balanceOf(address(this)).sub(_beforeToken1Bal);
         if (balA > 0 || balB > 0) {
             router.addLiquidity(
                 tokenA,
@@ -203,6 +204,9 @@ abstract contract LpSpell {
         address lp,
         WithdrawAmounts memory amt
     ) internal {
+        uint _beforeToken0Bal = IERC20(tokenA).balanceOf(address(this));
+        uint _beforeToken1Bal = IERC20(tokenB).balanceOf(address(this));
+
         // 1. Remove liquidity
         if (amt.amtLPWithdraw > 0) {
             router.removeLiquidity(
@@ -216,15 +220,26 @@ abstract contract LpSpell {
             );
         }
 
+        uint _afterToken0Bal = IERC20(tokenA).balanceOf(address(this)).sub(_beforeToken0Bal);
+        uint _afterToken1Bal = IERC20(tokenB).balanceOf(address(this)).sub(_beforeToken1Bal);
+
         // 2. Slippage control
-        require(IERC20(tokenA).balanceOf(address(this)) >= amt.amtAMin);
-        require(IERC20(tokenB).balanceOf(address(this)) >= amt.amtBMin);
+        require(_afterToken0Bal >= amt.amtAMin);
+        require(_afterToken1Bal >= amt.amtBMin);
+        require(IERC20(lp).balanceOf(address(this)) == 0);
 
         // 3. Refund leftover
-        doRefundETH();
-        doRefund(tokenA);
-        doRefund(tokenB);
-        doRefund(lp);
+        if (tokenA == WHT) {
+            doRefundETH(_afterToken0Bal);
+        } else {
+            doRefund(tokenA, _afterToken0Bal);
+        }
+
+        if (tokenB == WHT) {
+            doRefundETH(_afterToken1Bal);
+        } else {
+            doRefund(tokenB, _afterToken1Bal);
+        }
     }
 
     function addLiquidityWERC20(Amounts calldata amt) external payable virtual;

@@ -2,7 +2,14 @@
 pragma solidity ^0.6.12;
 
 interface IFarmPool {
-    function pending(uint256 pid, address user) external view returns (uint256);
+    // Booster
+    function userInfo(uint256 pid, address user) external view returns (uint256, uint256, uint256);
+
+    function pendingRewards(uint256 pid, address user) external view returns (uint256);
+
+    function pending(uint256 pid, address user) external view returns (uint256, uint256);
+
+    function claim(uint256 pid) external returns (uint256);
 
     function deposit(uint256 pid, uint256 amount) external;
 

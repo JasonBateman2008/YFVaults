@@ -12,6 +12,11 @@ interface IStrategy {
     // Main want token compounding function
     function earn() external;
 
+    // View function to see pending BOO
+    function pending() external view returns (uint, uint);
+
+    function claim(address _userAddress, uint _rewards0, uint _rewards1) external returns (uint, uint);
+
     // Transfer want tokens yfvaluts -> strategy
     function deposit(address _userAddress, uint _wantAmt) external returns (uint);
 
